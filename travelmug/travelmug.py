@@ -6,6 +6,7 @@ import inspect
 import os
 import traceback
 import cgi
+import collections
 
 from flask import Flask, jsonify, render_template, request
 from flask_bootstrap import Bootstrap
@@ -80,7 +81,7 @@ class TravelMug(object):
         self.flask_app = Flask(__name__)
         Bootstrap(self.flask_app)
         self.flask_app.config['BOOTSTRAP_SERVE_LOCAL'] = True
-        self._functions = {}
+        self._functions = collections.OrderedDict()
 
     def add(self, func):
         """Decorator to add a function to the UI"""
