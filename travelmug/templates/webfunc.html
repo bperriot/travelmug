@@ -25,8 +25,11 @@
     $('input[name={{webfunc.args[0].name}}]').focus();
   });
 </script>
-<div class="panel-heading">{{webfunc.name}}</div>
+<div class="panel-heading">{{webfunc.print_name}}</div>
 <div class="panel-body">
+  {% if webfunc.help_message %}
+  <div class="text-muted">{{webfunc.help_message|safe}}</div>
+  {% endif %}
 <div class="form-horizontal">
   {% for arg in webfunc.args %}
   <div class="form-group">

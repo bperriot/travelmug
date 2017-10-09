@@ -8,7 +8,7 @@ mug = travelmug.TravelMug()
 
 @mug.add
 def addition(number_1, number_2):
-    """Add 2 intergers"""
+    """Add 2 integers"""
     return int(number_1) + int(number_2)
 
 
