@@ -1,1 +1,1 @@
-from travelmug import TravelMug
+from .travelmug import TravelMug
