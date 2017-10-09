@@ -19,9 +19,12 @@ def fail(number_1, number_2):
 
 
 @mug.add
+@mug.argspec('number_1', print_name='a')
+@mug.argspec('number_1', type_=int)
+@mug.argspec('number_2', print_name='b', type_=int)
 def mul(number_1, number_2):
-    """Return number a * number b"""
-    return int(number_1) * int(number_2)
+    """Return a * b"""
+    return number_1 * number_2
 
 
 @mug.add
