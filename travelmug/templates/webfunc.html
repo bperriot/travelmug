@@ -1,0 +1,48 @@
+<div class="col-md-6">
+<div id="{{webfunc.name}}" class="panel panel-default">
+<script type="text/javascript">
+  $(function() {
+    var submit_form = function(e) {
+      $.getJSON($SCRIPT_ROOT + '/_call', {
+          fname: "{{webfunc.name}}",
+          {% for arg in webfunc.args %}
+          {{arg.name}}: $('#{{webfunc.name}} input[name="{{arg.name}}"]').val(),
+          {% endfor %}
+      }, function(data) {
+        $('#{{webfunc.name}}__return').text(data.return_html);
+      });
+      return false;
+    };
+
+    $('button#{{webfunc.name}}__calculate').bind('click', submit_form);
+
+    $('#{{webfunc.name}} input[type=text]').bind('keydown', function(e) {
+      if (e.keyCode == 13) {
+        submit_form(e);
+      }
+    });
+
+    $('input[name={{webfunc.args[0].name}}]').focus();
+  });
+</script>
+<div class="panel-heading">{{webfunc.name}}</div>
+<div class="panel-body">
+<div class="form-horizontal">
+  {% for arg in webfunc.args %}
+  <div class="form-group">
+    <label for="{{arg.name}}" class="col-md-5 control-label">{{arg.print_name}}</label>
+    <div class="col-md-6">
+      <input type="text" name="{{arg.name}}" class="form-control" value="{{arg.default}}" placeholder="">
+    </div>
+  </div>
+  {% endfor %}
+  <div class="form-group">
+    <div class="col-md-offset-5 col-md-7">
+      <button type="submit" id="{{webfunc.name}}__calculate" class="btn btn-default">Calculate</button>
+    </div>
+  </div>
+<div id="{{webfunc.name}}__return" class="col-md-offset-5 col-md-7"></div>
+</div>
+</div>
+</div>
+</div>

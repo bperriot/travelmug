@@ -1,0 +1,43 @@
+{%- extends "bootstrap/base.html" %}
+
+{# Fixes for legacy browsers. #}
+{% import "bootstrap/fixes.html" as fixes %}
+{% block head %}
+{{super()}}
+{{fixes.ie8()}}
+{%- endblock %}
+
+{% import "bootstrap/utils.html" as utils %}
+
+{% block body %}
+{% block scripts %}
+{{super()}}
+<script type="text/javascript">
+  var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+</script>
+{% endblock scripts %}
+{% block navbar %}
+{%- endblock navbar %}
+{% block content %}
+<div class="container-fluid">
+<h1>{{title}}</h1>
+
+<div class="container">
+
+<row>
+{% for webfunc in functions.values() %}
+{% include 'webfunc.html' %}
+{% endfor %}
+</row>
+
+</div>
+</div>
+
+<footer class="footer">
+    <div class="container">
+        <span class="text-muted">Built with Travelmug.
+        Powered by Flask, Bootstrap and jQuery.</span>
+    </div>
+</footer>
+{% endblock content %}
+{% endblock body %}
