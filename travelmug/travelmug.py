@@ -7,6 +7,7 @@ import os
 import traceback
 import cgi
 import collections
+import functools
 
 from flask import Flask, jsonify, render_template, request
 from flask_bootstrap import Bootstrap
@@ -83,13 +84,21 @@ class TravelMug(object):
         self.flask_app.config['BOOTSTRAP_SERVE_LOCAL'] = True
         self._functions = collections.OrderedDict()
 
-    def add(self, func):
-        """Decorator to add a function to the UI"""
-        fname = func.__name__
-        args = [Argument(arg) for arg in inspect.getargspec(func).args]
+    def add(self, func=None, print_name=''):
+        """Decorator to add a function to the UI
 
-        self._functions[fname] = (WebFunction(func, fname, args))
-        return func
+        Optional decorator arguments
+        ============================
+        print_name: string used to name the function on the UI
+        """
+        if func is None:
+            if print_name:
+                return functools.partial(self.add, print_name=print_name)
+        else:
+            fname = func.__name__
+            args = [Argument(arg) for arg in inspect.getargspec(func).args]
+            self._functions[fname] = WebFunction(func, fname, args, print_name)
+            return func
 
     def run(self, debug=False):
         """Launch the web server

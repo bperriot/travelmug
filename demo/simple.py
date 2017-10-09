@@ -6,7 +6,7 @@ import travelmug
 mug = travelmug.TravelMug()
 
 
-@mug.add
+@mug.add(print_name='Addition of integers')
 def addition(number_1, number_2):
     """Add 2 integers"""
     return int(number_1) + int(number_2)
