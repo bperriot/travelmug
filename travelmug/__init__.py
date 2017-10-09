@@ -1,1 +1,1 @@
-from travelmug import *
+from travelmug import TravelMug
