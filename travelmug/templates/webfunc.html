@@ -9,7 +9,13 @@
           {{arg.name}}: $('#{{webfunc.name}} input[name="{{arg.name}}"]').val(),
           {% endfor %}
       }, function(data) {
-        $('#{{webfunc.name}}__return').text(data.return_html);
+        if(data.success) {
+          $('#{{webfunc.name}}__return').html(data.return_html);
+        } else {
+          $('#{{webfunc.name}}__return').html(
+'<div class="alert alert-danger alert-dismissible" role="alert"> <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>' + data.error_msg + '</div>') }
+
+
       });
       return false;
     };
@@ -44,7 +50,7 @@
       <button type="submit" id="{{webfunc.name}}__calculate" class="btn btn-default">Calculate</button>
     </div>
   </div>
-<div id="{{webfunc.name}}__return" class="col-md-offset-5 col-md-7"></div>
+<div id="{{webfunc.name}}__return" class="centered"></div>
 </div>
 </div>
 </div>

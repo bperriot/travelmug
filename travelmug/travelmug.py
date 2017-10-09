@@ -3,6 +3,9 @@
 
 import re
 import inspect
+import os
+import traceback
+import cgi
 
 from flask import Flask, jsonify, render_template, request
 from flask_bootstrap import Bootstrap
@@ -14,12 +17,20 @@ def format_name(str_):
 
 
 def format_doc(docstring):
-    text = re.split('(?:\r|\n|\r\n)[ \t]*(?:\r|\n|\r\n)', docstring)
+    text = cgi.escape(docstring, quote=True)
+    text = re.split('(?:\r|\n|\r\n)[ \t]*(?:\r|\n|\r\n)', text)
     return '<p>' + '</p><p>'.join(text) + '</p>'
+
+
+def escape_html(text):
+    text = cgi.escape(text, quote=True)
+    text = text.replace(os.linesep, '<br/>')
+    return text.replace(' ', '&nbsp')
 
 
 class WebFunction(object):
     """A function to be published on the web UI"""
+
     def __init__(self, func, name, args=[], print_name=''):
         super(WebFunction, self).__init__()
         self.func = func
@@ -64,6 +75,7 @@ class TravelMug(object):
     >>> mug.run()
 
     """
+
     def __init__(self):
         self.flask_app = Flask(__name__)
         Bootstrap(self.flask_app)
@@ -93,7 +105,22 @@ class TravelMug(object):
             for arg in wf.arg_names():
                 args[arg] = request.args.get(arg)
 
-            return jsonify(return_html=str(wf.func(**args)))
+            try:
+                r = wf.func(**args)
+            except Exception as e:
+                print (traceback.format_exc())
+                error_msg = '<p><strong>'
+                error_msg += 'The function raised the following exception:'
+                error_msg += '</strong><br/>'
+                if debug:
+                    error_msg += escape_html(traceback.format_exc())
+                else:
+                    error_msg += escape_html(e.message)
+                error_msg += '</p>'
+
+                return jsonify(success=False, error_msg=error_msg)
+            else:
+                return jsonify(success=True, return_html=str(r))
 
         @self.flask_app.route('/')
         def index():
