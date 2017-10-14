@@ -2,21 +2,35 @@
 <div id="{{webfunc.name}}" class="panel panel-default">
 <script type="text/javascript">
   $(function() {
+    var show_result = function(data) {
+      if(data.success) {
+        $('#{{webfunc.name}}__return').html(data.return_html);
+      } else {
+        $('#{{webfunc.name}}__return').html(
+'<div class="alert alert-danger alert-dismissible" role="alert"> <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>' + data.error_msg + '</div>'
+        )
+      }
+    };
+
     var submit_form = function(e) {
-      $.getJSON($SCRIPT_ROOT + '/_call', {
-          fname: "{{webfunc.name}}",
-          {% for arg in webfunc.args %}
-          {{arg.name}}: $('#{{webfunc.name}} input[name="{{arg.name}}"]').val(),
-          {% endfor %}
-      }, function(data) {
-        if(data.success) {
-          $('#{{webfunc.name}}__return').html(data.return_html);
-        } else {
-          $('#{{webfunc.name}}__return').html(
-'<div class="alert alert-danger alert-dismissible" role="alert"> <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>' + data.error_msg + '</div>') }
-
-
-      });
+        var form_data = new FormData();
+        form_data.append("_fname", "{{webfunc.name}}")
+        {% for arg in webfunc.args %}
+        form_data.append("{{arg.name}}",
+                         $('#{{webfunc.name}} input[name="{{arg.name}}"]').val())
+        {% endfor %}
+        $.ajax({
+            type: 'POST',
+            url: $SCRIPT_ROOT + '/_call',
+            data: form_data,
+            contentType: false,
+            cache: false,
+            processData: false,
+            async: false,
+            success: function(data) {
+              show_result(data);
+            },
+        });
       return false;
     };
 
@@ -47,7 +61,7 @@
   {% endfor %}
   <div class="form-group">
     <div class="col-md-offset-5 col-md-7">
-      <button type="submit" id="{{webfunc.name}}__calculate" class="btn btn-default">Calculate</button>
+      <button type="submit" id="{{webfunc.name}}__calculate" class="btn btn-primary">Calculate</button>
     </div>
   </div>
 <div id="{{webfunc.name}}__return" class="centered"></div>

@@ -74,9 +74,7 @@ class WebFunctionWorker(object):
     def set_args(self, **kwargs):
         self.kwargs = {}
         for arg in self.webfunction.args:
-            argvalue = kwargs[arg.name]
-            if arg.type:
-                argvalue = arg.type(argvalue)
+            argvalue = argtype(value)
             self.kwargs[arg.name] = argvalue
 
     def run(self):
@@ -169,13 +167,15 @@ class TravelMug(object):
         ==========
         debug: active Flask's debug mode
         """
-        @self.flask_app.route('/_call')
+        @self.flask_app.route('/_call', methods=['GET', 'POST'])
         def _call():
-            fname = request.args.get('fname')
+            #fname = request.args.get('fname')
+            fname = request.form.get('_fname')
+            print "fname", fname
             wf = self._functions[fname]
             args = {}
             for argname in wf.arg_names():
-                args[argname] = request.args.get(argname)
+                args[argname] = request.form.get(argname)
 
             worker = WebFunctionWorker(wf)
             try:

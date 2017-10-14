@@ -13,6 +13,7 @@ setup(
 
         'Intended Audience :: Developers',
         'Topic :: Software Development :: User Interfaces',
+        'Framework :: Flask',
 
         'License :: OSI Approved :: MIT License',
 
