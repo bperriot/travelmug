@@ -10,7 +10,7 @@ import collections
 import functools
 import weakref
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, Response
 from flask_bootstrap import Bootstrap
 
 
@@ -31,10 +31,42 @@ def escape_html(text):
     return text.replace(' ', '&nbsp')
 
 
+class FunctionSpecification(object):
+    """Store the argument or return value FunctionSpecification
+
+    Used only to resolve the chain of decorators.
+    """
+
+    def __init__(self, func):
+        self.func = func
+        self.argspec = {}
+        self.retspec = {}
+
+    def add(self, type_, name, kwargs):
+        if type_ == 'arg':
+            dct = self.argspec.setdefault(name, {})
+        elif type_ == 'return':
+            dct = self.retspec
+        else:
+            raise ValueError("Unsupported type_: %s" % type_)
+        dct.update(kwargs)
+
+    @staticmethod
+    def wrapper(type_, name, kwargs):
+        def wrapper(arg):
+            if isinstance(arg, FunctionSpecification):
+                spec = arg
+            else:  # the wrapper received the decorated function
+                spec = FunctionSpecification(arg)
+            spec.add(type_, name, kwargs)
+            return spec
+        return wrapper
+
+
 class WebFunction(object):
     """A function to be published on the web UI"""
 
-    def __init__(self, func, name, args=None, print_name=''):
+    def __init__(self, func, name, args, return_value, print_name=''):
         super(WebFunction, self).__init__()
         self.func = func
         self.name = name
@@ -45,6 +77,7 @@ class WebFunction(object):
                     "The Argument is already associated to another WebFunction (%s)"
                     % arg.parent.name)
             arg.parent = weakref.proxy(self)
+        self.return_value = return_value
         self.help_message = format_doc(func.__doc__)
         self._print_name = print_name
 
@@ -79,6 +112,13 @@ class Argument(object):
             return render_template("string_input.html", arg=self)
 
 
+class ReturnValue(object):
+    """Describe the way the return value will be returned"""
+
+    def __init__(self, download=False):
+        self.download = download
+
+
 class WebFunctionWorker(object):
     """One instance of the function execution"""
 
@@ -102,7 +142,16 @@ class WebFunctionWorker(object):
             self.kwargs[arg.name] = argvalue
 
     def run(self):
-        return self.webfunction.func(**self.kwargs)
+        r = self.webfunction.func(**self.kwargs)
+        if self.webfunction.return_value.download:
+            return Response(
+                str(r),
+                mimetype="text",
+                headers={"Content-disposition":
+                         "attachment; filename=%s.txt" %
+                         self.webfunction.name})
+        else:
+            return jsonify(success=True, return_html=str(r))
 
 
 class TravelMug(object):
@@ -124,32 +173,34 @@ class TravelMug(object):
         self.flask_app.config['BOOTSTRAP_SERVE_LOCAL'] = True
         self._functions = collections.OrderedDict()
 
-    def _add(self, func, print_name='', argspec=None):
-        fname = func.__name__
-        argspec = argspec or {}
-        args = [Argument(arg, **argspec.get(arg, {}))
-                for arg in inspect.getargspec(func).args]
-        self._functions[fname] = WebFunction(func, fname, args, print_name)
-        return func
+    def _add(self, funcspec, print_name=''):
+        fname = funcspec.func.__name__
+        args = [Argument(argname, **funcspec.argspec.get(argname, {}))
+                for argname in inspect.getargspec(funcspec.func).args]
+        self._functions[fname] = WebFunction(funcspec.func, fname, args,
+                                             ReturnValue(**funcspec.retspec),
+                                             print_name)
+        return funcspec.func
 
-    def add(self, func=None, print_name=''):
+    def add(self, arg=None, print_name=''):
         """Decorator to add a function to the UI
+
+        It must always be placed before the specification decorator
 
         Optional decorator arguments
         ============================
         print_name: string used to name the function on the UI
         """
-        if func is None:
+        if arg is None:
             if print_name:
                 return functools.partial(self.add, print_name=print_name)
-        elif callable(func):
-            # add was called without self.argspec
-            return self._add(func, print_name)
-        elif len(func) == 2:
-            # we're receiving a tuple from self.argspec instead of a func
-            return self._add(func[0], print_name, argspec=func[1])
+        elif isinstance(arg, FunctionSpecification):
+            return self._add(arg, print_name)
+        elif callable(arg):
+            # add was called without any specification decorator
+            return self._add(FunctionSpecification(arg), print_name)
         else:
-            raise ValueError("Unsupported type for func %d" % func)
+            raise ValueError("Unsupported type for arg %d" % arg)
 
     def argspec(self, argname, **kwargs):
         """Specify arguments' attributes
@@ -159,7 +210,7 @@ class TravelMug(object):
         Optional keyword arguments
         ==========================
         print_name: string used to name the argument on the UI
-        type_: type of the argument (must be callable)
+        type_: type of the argument. Can be callable or 'file'
 
         Example of use
         ==============
@@ -169,20 +220,23 @@ class TravelMug(object):
         ... def convert_to_hex(value):
         ...    return hex(value)
         """
-        spec = {argname: kwargs}
+        return FunctionSpecification.wrapper("arg", argname, kwargs)
 
-        def wrapper(arg):
-            if callable(arg):
-                func = arg
-            elif len(arg) == 2:
-                func = arg[0]
-                for key, value in arg[1].items():
-                    if key in spec:
-                        spec[key].update(value)
-                    else:
-                        spec[key] = value
-            return (func, spec)
-        return wrapper
+    def retspec(self, **kwargs):
+        """Specify the way of returning the value
+
+        Optional keyword arguments
+        ==========================
+        download: set to True to download a file instead of printing the value
+
+        Example of use
+        ==============
+        >>> @mug.add
+        ... @mug.retspec(download=True)
+        ... def base_gitignore():
+        ...     return "*.pyc\n*.egg-info"
+        """
+        return FunctionSpecification.wrapper("return", '', kwargs)
 
     def run(self, debug=False):
         """Launch the web server
@@ -226,7 +280,7 @@ class TravelMug(object):
 
                 return jsonify(success=False, error_msg=error_msg)
             else:
-                return jsonify(success=True, return_html=str(r))
+                return r
 
         @self.flask_app.route('/')
         def index():

@@ -4,7 +4,7 @@
     <label class="btn btn-default" id="{{webfunc.name}}__{{arg.name}}__btn" for="{{webfunc.name}}__{{arg.name}}">
         <emph>Upload a file...</emph>
     </label>
-    <input id="{{webfunc.name}}__{{arg.name}}" type="file" style="display:none"
+    <input id="{{webfunc.name}}__{{arg.name}}" name="{{arg.name}}" type="file" style="display:none"
     onchange="$('#{{webfunc.name}}__{{arg.name}}__btn').html(this.files[0].name)">
   </div>
 </div>

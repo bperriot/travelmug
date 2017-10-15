@@ -2,6 +2,7 @@
 <div id="{{webfunc.name}}" class="panel panel-default">
 <script type="text/javascript">
   $(function() {
+    {% if not webfunc.return_value.download %}
     var show_result = function(data) {
       if(data.success) {
         $('#{{webfunc.name}}__return').html(data.return_html);
@@ -46,7 +47,7 @@
         submit_form(e);
       }
     });
-
+    {% endif %}
     $('input[name={{webfunc.args[0].name}}]').focus();
   });
 </script>
@@ -55,7 +56,9 @@
   {% if webfunc.help_message %}
   <div class="text-muted">{{webfunc.help_message|safe}}</div>
   {% endif %}
-<div class="form-horizontal">
+<form class="form-horizontal"
+    {% if webfunc.return_value.download %} action="/_call" method="POST" enctype="multipart/form-data"{% endif %} >
+  <input name="_fname" value="{{webfunc.name}}" hidden>
   {% for arg in webfunc.args %}
     {{arg.input_html()|safe}}
   {% endfor %}
@@ -65,7 +68,7 @@
     </div>
   </div>
 <div id="{{webfunc.name}}__return" class="centered"></div>
-</div>
+</form>
 </div>
 </div>
 </div>
