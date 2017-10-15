@@ -8,6 +8,7 @@ import traceback
 import cgi
 import collections
 import functools
+import weakref
 
 from flask import Flask, jsonify, render_template, request
 from flask_bootstrap import Bootstrap
@@ -38,6 +39,12 @@ class WebFunction(object):
         self.func = func
         self.name = name
         self.args = args or []
+        for arg in self.args:
+            if arg.parent is not None:
+                raise ValueError(
+                    "The Argument is already associated to another WebFunction (%s)"
+                    % arg.parent.name)
+            arg.parent = weakref.proxy(self)
         self.help_message = format_doc(func.__doc__)
         self._print_name = print_name
 
@@ -55,6 +62,7 @@ class Argument(object):
     def __init__(self, name, type_=None, default='', help_='', print_name=''):
         super(Argument, self).__init__()
         self.name = name
+        self.parent = None
         self.type = type_
         self.default = default
         self.help = help_
@@ -64,9 +72,16 @@ class Argument(object):
     def print_name(self):
         return self._print_name or format_name(self.name)
 
+    def input_html(self):
+        if self.type == 'file':
+            return render_template("file_input.html", webfunc=self.parent, arg=self)
+        else:
+            return render_template("string_input.html", arg=self)
+
 
 class WebFunctionWorker(object):
     """One instance of the function execution"""
+
     def __init__(self, webfunction):
         self.webfunction = webfunction
         self.kwargs = None
@@ -74,7 +89,16 @@ class WebFunctionWorker(object):
     def set_args(self, **kwargs):
         self.kwargs = {}
         for arg in self.webfunction.args:
-            argvalue = argtype(value)
+            argvalue = kwargs[arg.name]
+            if arg.type:
+                if callable(arg.type):
+                    argvalue = arg.type(argvalue)
+                elif arg.type == 'file':
+                    argvalue = argvalue
+                else:
+                    raise ValueError("Unsupported value for arg type (%s)" %
+                                     str(arg.type))
+
             self.kwargs[arg.name] = argvalue
 
     def run(self):
@@ -104,7 +128,7 @@ class TravelMug(object):
         fname = func.__name__
         argspec = argspec or {}
         args = [Argument(arg, **argspec.get(arg, {}))
-                 for arg in inspect.getargspec(func).args]
+                for arg in inspect.getargspec(func).args]
         self._functions[fname] = WebFunction(func, fname, args, print_name)
         return func
 
@@ -169,13 +193,14 @@ class TravelMug(object):
         """
         @self.flask_app.route('/_call', methods=['GET', 'POST'])
         def _call():
-            #fname = request.args.get('fname')
             fname = request.form.get('_fname')
-            print "fname", fname
             wf = self._functions[fname]
             args = {}
-            for argname in wf.arg_names():
-                args[argname] = request.form.get(argname)
+            for arg in wf.args:
+                if arg.type == 'file':
+                    args[arg.name] = request.files.get(arg.name)
+                else:
+                    args[arg.name] = request.form.get(arg.name)
 
             worker = WebFunctionWorker(wf)
             try:
@@ -189,7 +214,7 @@ class TravelMug(object):
             try:
                 r = worker.run()
             except Exception as e:
-                print (traceback.format_exc())
+                print(traceback.format_exc())
                 error_msg = '<p><strong>'
                 error_msg += 'The function raised the following exception:'
                 error_msg += '</strong><br/>'

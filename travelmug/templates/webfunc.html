@@ -16,8 +16,13 @@
         var form_data = new FormData();
         form_data.append("_fname", "{{webfunc.name}}")
         {% for arg in webfunc.args %}
+        {% if arg.type == 'file' %}
         form_data.append("{{arg.name}}",
-                         $('#{{webfunc.name}} input[name="{{arg.name}}"]').val())
+                         $('#{{webfunc.name}}__{{arg.name}}')[0].files[0]);
+        {% else %}
+        form_data.append("{{arg.name}}",
+                         $('#{{webfunc.name}} input[name="{{arg.name}}"]').val());
+        {% endif %}
         {% endfor %}
         $.ajax({
             type: 'POST',
@@ -52,12 +57,7 @@
   {% endif %}
 <div class="form-horizontal">
   {% for arg in webfunc.args %}
-  <div class="form-group">
-    <label for="{{arg.name}}" class="col-md-5 control-label">{{arg.print_name}}</label>
-    <div class="col-md-6">
-      <input type="text" name="{{arg.name}}" class="form-control" value="{{arg.default}}" placeholder="">
-    </div>
-  </div>
+    {{arg.input_html()|safe}}
   {% endfor %}
   <div class="form-group">
     <div class="col-md-offset-5 col-md-7">

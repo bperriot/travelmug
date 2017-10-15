@@ -1,0 +1,10 @@
+<div class="form-group">
+  <label for="{{arg.name}}" class="col-md-5 control-label">{{arg.print_name}}</label>
+  <div class="col-md-6">
+    <label class="btn btn-default" id="{{webfunc.name}}__{{arg.name}}__btn" for="{{webfunc.name}}__{{arg.name}}">
+        <emph>Upload a file...</emph>
+    </label>
+    <input id="{{webfunc.name}}__{{arg.name}}" type="file" style="display:none"
+    onchange="$('#{{webfunc.name}}__{{arg.name}}__btn').html(this.files[0].name)">
+  </div>
+</div>
